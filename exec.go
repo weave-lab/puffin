@@ -16,7 +16,7 @@ func NewOsExec() Exec {
 	return &OsExec{}
 }
 
-// Lookpath behaves the same as exec.LookPath https://pkg.go.dev/os/exec#LookPath
+// LookPath behaves the same as exec.LookPath https://pkg.go.dev/os/exec#LookPath
 func (*OsExec) LookPath(file string) (string, error) {
 	return exec.LookPath(file)
 }

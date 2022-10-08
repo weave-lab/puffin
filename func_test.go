@@ -13,7 +13,7 @@ import (
 
 func TestExec_LookPath(t *testing.T) {
 	type fields struct {
-		funcMap map[string]CmdFunc
+		bins []string
 	}
 	type args struct {
 		file string
@@ -28,10 +28,10 @@ func TestExec_LookPath(t *testing.T) {
 		{
 			"missing func",
 			fields{
-				funcMap: map[string]CmdFunc{},
+				bins: []string{"/fail/path/to/test"},
 			},
 			args{
-				file: "test",
+				file: "/path/to/test",
 			},
 			"",
 			true,
@@ -39,9 +39,7 @@ func TestExec_LookPath(t *testing.T) {
 		{
 			"found command",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"test": func(fc *FuncCmd) int { return 0 },
-				},
+				bins: []string{"test"},
 			},
 			args{
 				file: "test",
@@ -52,9 +50,7 @@ func TestExec_LookPath(t *testing.T) {
 		{
 			"found command file",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"/path/to/test": func(fc *FuncCmd) int { return 0 },
-				},
+				bins: []string{"/path/to/test"},
 			},
 			args{
 				file: "test",
@@ -65,9 +61,7 @@ func TestExec_LookPath(t *testing.T) {
 		{
 			"found file",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"/path/to/test": func(fc *FuncCmd) int { return 0 },
-				},
+				bins: []string{"/path/to/test"},
 			},
 			args{
 				file: "/path/to/test",
@@ -79,7 +73,7 @@ func TestExec_LookPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &FuncExec{
-				funcMap: tt.fields.funcMap,
+				bins: tt.fields.bins,
 			}
 			got, err := e.LookPath(tt.args.file)
 			if (err != nil) != tt.wantErr {
@@ -94,8 +88,9 @@ func TestExec_LookPath(t *testing.T) {
 
 func TestFuncExec_Command(t *testing.T) {
 	type fields struct {
-		funcMap map[string]CmdFunc
-		envs    map[string]string
+		mux  *Mux
+		bins []string
+		envs map[string]string
 	}
 	type args struct {
 		name string
@@ -110,9 +105,12 @@ func TestFuncExec_Command(t *testing.T) {
 		{
 			"cmd with args",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"test": func(fc *FuncCmd) int { return 0 },
+				mux: &Mux{
+					matchers: []muxMatcher{
+						{pat: pat("test")},
+					},
 				},
+				bins: []string{"*"},
 			},
 			args{
 				name: "test",
@@ -128,9 +126,12 @@ func TestFuncExec_Command(t *testing.T) {
 		{
 			"different path",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"/path/to/test": func(fc *FuncCmd) int { return 0 },
+				mux: &Mux{
+					matchers: []muxMatcher{
+						{pat: pat("/path/to/test")},
+					},
 				},
+				bins: []string{"/path/to/test"},
 			},
 			args{
 				name: "test",
@@ -146,7 +147,7 @@ func TestFuncExec_Command(t *testing.T) {
 		{
 			"lookpath failure",
 			fields{
-				funcMap: map[string]CmdFunc{},
+				bins: []string{"missing"},
 			},
 			args{
 				name: "test",
@@ -164,8 +165,8 @@ func TestFuncExec_Command(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &FuncExec{
-				funcMap: tt.fields.funcMap,
-				envs:    tt.fields.envs,
+				bins: tt.fields.bins,
+				envs: tt.fields.envs,
 			}
 
 			// set up tt.want with the correct fExec
@@ -214,8 +215,9 @@ func TestFuncExec_CommandContext(t *testing.T) {
 	defer cancel()
 
 	type fields struct {
-		funcMap map[string]CmdFunc
-		envs    map[string]string
+		mux  *Mux
+		bins []string
+		envs map[string]string
 	}
 	type args struct {
 		ctx  context.Context
@@ -231,9 +233,12 @@ func TestFuncExec_CommandContext(t *testing.T) {
 		{
 			"cmd with args",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"test": func(fc *FuncCmd) int { return 0 },
+				mux: &Mux{
+					matchers: []muxMatcher{
+						{pat: pat("test")},
+					},
 				},
+				bins: []string{"*"},
 			},
 			args{
 				ctx:  context.Background(),
@@ -251,9 +256,12 @@ func TestFuncExec_CommandContext(t *testing.T) {
 		{
 			"different path",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"/path/to/test": func(fc *FuncCmd) int { return 0 },
+				mux: &Mux{
+					matchers: []muxMatcher{
+						{pat: pat("/path/to/test")},
+					},
 				},
+				bins: []string{"/path/to/test"},
 			},
 			args{
 				ctx:  context.Background(),
@@ -271,7 +279,7 @@ func TestFuncExec_CommandContext(t *testing.T) {
 		{
 			"lookpath failure",
 			fields{
-				funcMap: map[string]CmdFunc{},
+				bins: []string{"/bin/missing"},
 			},
 			args{
 				ctx:  context.Background(),
@@ -290,9 +298,12 @@ func TestFuncExec_CommandContext(t *testing.T) {
 		{
 			"with timeout context",
 			fields{
-				funcMap: map[string]CmdFunc{
-					"test": func(fc *FuncCmd) int { return 0 },
+				mux: &Mux{
+					matchers: []muxMatcher{
+						{pat: pat("test")},
+					},
 				},
+				bins: []string{"*"},
 			},
 			args{
 				ctx:  timeoutCtx,
@@ -311,8 +322,9 @@ func TestFuncExec_CommandContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &FuncExec{
-				funcMap: tt.fields.funcMap,
-				envs:    tt.fields.envs,
+				mux:  tt.fields.mux,
+				bins: tt.fields.bins,
+				envs: tt.fields.envs,
 			}
 
 			// set up tt.want with the correct fExec
@@ -409,10 +421,18 @@ func TestFuncCmd_Start(t *testing.T) {
 				path:     "test",
 				exitCode: make(chan int, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, _ = fc.stdout.Write([]byte("test was run"))
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("Start() failed to setup test, %s", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -607,18 +627,23 @@ func TestFuncCmd_Run(t *testing.T) {
 				ctxErr:     make(chan error, 1),
 				stdout:     newLockableBuffer(),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"slow": func(fc *FuncCmd) int {
-							_, err := fc.stdout.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("Run() failed to run slow command %v", err)
-							}
-							time.Sleep(time.Millisecond * 10)
-							_, err = fc.stdout.Write([]byte("sleep finished"))
-							if err != nil {
-								t.Fatalf("Run() failed to run slow command %v", err)
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("slow"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("Run() failed to run slow command %v", err)
+									}
+									time.Sleep(time.Millisecond * 10)
+									_, err = fc.stdout.Write([]byte("sleep finished"))
+									if err != nil {
+										t.Fatalf("Run() failed to run slow command %v", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -635,13 +660,18 @@ func TestFuncCmd_Run(t *testing.T) {
 				ctxErr:     make(chan error, 1),
 				stdout:     newLockableBuffer(),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"fast": func(fc *FuncCmd) int {
-							_, err := fc.stdout.Write([]byte("test was run"))
-							if err != nil {
-								return 1
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("fast"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										return 1
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -657,13 +687,18 @@ func TestFuncCmd_Run(t *testing.T) {
 				ctxErr:   make(chan error, 1),
 				stdout:   newLockableBuffer(),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stdout.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("Run() failed to run test command %v", err)
-							}
-							return 1 // no-zero exit code
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("Run() failed to run test command %v", err)
+									}
+									return 1 // no-zero exit code
+								},
+							},
 						},
 					},
 				},
@@ -739,13 +774,18 @@ func TestFuncCmd_CombinedOutput(t *testing.T) {
 				exitCode: make(chan int, 1),
 				ctxErr:   make(chan error, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stdout.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("CombinedOutput() failed to run test command %v", err)
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("CombinedOutput() failed to run test command %v", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -760,13 +800,18 @@ func TestFuncCmd_CombinedOutput(t *testing.T) {
 				exitCode: make(chan int, 1),
 				ctxErr:   make(chan error, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stderr.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("CombinedOutput() failed to run test command %v", err)
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stderr.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("CombinedOutput() failed to run test command %v", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -781,17 +826,22 @@ func TestFuncCmd_CombinedOutput(t *testing.T) {
 				exitCode: make(chan int, 1),
 				ctxErr:   make(chan error, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stdout.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("CombinedOutput() failed to run test command %v", err)
-							}
-							_, err = fc.stderr.Write([]byte("there was an err"))
-							if err != nil {
-								t.Fatalf("CombinedOutput() failed to run test command %v", err)
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("CombinedOutput() failed to run test command %v", err)
+									}
+									_, err = fc.stderr.Write([]byte("there was an err"))
+									if err != nil {
+										t.Fatalf("CombinedOutput() failed to run test command %v", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -908,13 +958,18 @@ func TestFuncCmd_Output(t *testing.T) {
 				ctxErr:   make(chan error, 1),
 				exitCode: make(chan int, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stdout.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("Output() failed to run test command %v", err)
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("Output() failed to run test command %v", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -929,13 +984,18 @@ func TestFuncCmd_Output(t *testing.T) {
 				ctxErr:   make(chan error, 1),
 				exitCode: make(chan int, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stderr.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("Output() failed to run test command %v", err)
-							}
-							return 1
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stderr.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("Output() failed to run test command %v", err)
+									}
+									return 1
+								},
+							},
 						},
 					},
 				},
@@ -1011,13 +1071,18 @@ func TestFuncCmd_StderrPipe(t *testing.T) {
 				ctxErr:   make(chan error, 1),
 				exitCode: make(chan int, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stderr.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("StderrPipe() failed to run test command %v", err)
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stderr.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("StderrPipe() failed to run test command %v", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -1101,13 +1166,18 @@ func TestFuncCmd_StdoutPipe(t *testing.T) {
 				ctxErr:   make(chan error, 1),
 				exitCode: make(chan int, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							_, err := fc.stdout.Write([]byte("test was run"))
-							if err != nil {
-								t.Fatalf("StdoutPipe() failed to run test command %v", err)
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									_, err := fc.stdout.Write([]byte("test was run"))
+									if err != nil {
+										t.Fatalf("StdoutPipe() failed to run test command %v", err)
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
@@ -1188,16 +1258,21 @@ func TestFuncCmd_StdinPipe(t *testing.T) {
 				ctxErr:   make(chan error, 1),
 				exitCode: make(chan int, 1),
 				fExec: &FuncExec{
-					funcMap: map[string]CmdFunc{
-						"test": func(fc *FuncCmd) int {
-							gotInput, err := io.ReadAll(fc.stdin)
-							if err != nil {
-								return 1
-							}
-							if string(gotInput) != "test input" {
-								return 1
-							}
-							return 0
+					mux: &Mux{
+						matchers: []muxMatcher{
+							{
+								pat: pat("test"),
+								handler: func(fc *FuncCmd) int {
+									gotInput, err := io.ReadAll(fc.stdin)
+									if err != nil {
+										return 1
+									}
+									if string(gotInput) != "test input" {
+										return 1
+									}
+									return 0
+								},
+							},
 						},
 					},
 				},
