@@ -1,10 +1,10 @@
 # Puffin 
 Puffin abstracts Go's [os/exec go package](https://pkg.go.dev/os/exec).
 It can be used replace calls to the underlying shell with calls to go functions.
-This can be great for testing or for use cases where a simulated shell would be prefered over a real one.
+This can be great for testing or for use cases where a simulated shell would be preferred over a real one.
 
 # Quick Start
-Puffin is designed to be easy to incoporate into your existing codebase.
+Puffin is designed to be easy to incorporate into your existing codebase.
 The following code is an example of how to refactor your code to use puffin.
 
 ```go
@@ -36,13 +36,14 @@ func branchIsClean() (bool, error) {
 ```
 
 This code can be re-written to use Puffin instead of Go's os/exec package.
+
 ```go
 package main
 
 import (
     "log"
 
-    "github.com/bjatkin/puffin"
+    "github.com/weave-lab/puffin"
 )
 
 func main() {
@@ -63,6 +64,7 @@ func branchIsClean(exec puffin.Exec) (bool, error) {
 
     return len(status) == 0, nil
 }
+
 ```
 
 A few things to note about the refactored code.
@@ -84,45 +86,54 @@ package main
 import (
     "testing"
 
-    "github.com/bjatkin/puffin"
+    "github.com/weave-lab/puffin"
 )
 
 func Test_branchIsClean(t *testing.T) {
+    type args struct {
+        exec puffin.Exec
+    }
     tests := []struct {
         name    string
-        cmdFunc puffin.CmdFunc
+        args    args
         want    bool
+        wantErr bool
     }{
         {
             "is clean",
-            func(fc *puffin.FuncCmd) int {
-                return 0
+            args{
+                puffin.NewFuncExec(puffin.NewHandlerMux(
+                    func(cmd *puffin.FuncCmd) int {
+                        return 0
+                    },
+                )),
             },
             true,
+            false,
         },
         {
             "is dirty",
-            func(fc *puffin.FuncCmd) int {
-                fc.Stdout().Write([]byte("M README.md"))
-                return 0
+            args{
+                puffin.NewFuncExec(puffin.NewHandlerMux(
+                    func(cmd *puffin.FuncCmd) int {
+                        cmd.Stdout().Write([]byte("M README.md"))
+                        return 0
+                    },
+                )),
             },
+            false,
             false,
         },
     }
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            exec := puffin.NewFuncExec(
-                puffin.WithFuncMap(map[string]puffin.CmdFunc{
-                    "git": tt.cmdFunc,
-                }),
-            )
-            got, err := branchIsClean(exec)
-            if err != nil {
-                t.Fatalf("branchIsClean() error = %v", err)
+            got, err := branchIsClean(tt.args.exec)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("branchIsClean() error = %v, wantErr %v", err, tt.wantErr)
+                return
             }
-
             if got != tt.want {
-                t.Errorf("branchIsClean() = %v, want %v", got, tt.want)
+                t.Errorf("branchIsClean() got = %v, want %v", got, tt.want)
             }
         })
     }
@@ -131,18 +142,20 @@ func Test_branchIsClean(t *testing.T) {
 
 Notice that this code uses `puffin.NewFuncExec` rather than `puffin.NewOSExec`.
 `puffin.NewFuncExec` also implements the `puffin.Exec` interface and is a "simulated" shell.
-It uses a `funcMap`, that maps command names to go functions, to run fake shell commands.
-This allows exec commands, like `git`, to have consistent, easily configurable behaviors which is great for writing tests around code that includes exec commands.
+It uses a `puffin.Mux`, that routes command calls to go functions, which then run mock shell commands.
+This allows exec commands, like `git`, to have consistent, easily to program behaviors which is great for writing tests around code that includes exec commands.
 Just remember, the point of these tests is to test the behavior of the code surrounding the exec commands, not the behavior the commands themselves.
 
 # The Exec Interface
 The exec interface can be used as a drop in replacement for the `os/exec` package.
 It exposes most of the same functions as that package and can often be used to shadow the `os/exec` package name.
 ```go
+package main
+
 import (
     "os/exec"
 
-    "github.com/bjatkin/puffin"
+    "github.com/weave-lab/puffin"
 )
 
 func example(exec puffin.Exec) {
@@ -173,12 +186,14 @@ There are a few key differences to be aware of however, mostly dude to the fact 
 This means that code which sets cmd members such as `Args` or `Dir` must instead use the `SetArgs` or `SetDir` functions.
 The following code provides an example.
 ```go
+package main 
+
 import "os/exec"
 
 func branchIsClean(dir string) (bool, error) {
     cmd := exec.Command("git")
-	cmd.Args = append(cmd.Args, "status", "--porcelain")
-	cmd.Dir = dir
+    cmd.Args = append(cmd.Args, "status", "--porcelain")
+    cmd.Dir = dir
 
     status, err := cmd.Output()
     if err != nil {
@@ -192,12 +207,14 @@ func branchIsClean(dir string) (bool, error) {
 This code must be changed slightly to use the `Args()`, `SetArgs()`, and `SetDir` methods rather than modifing the cmd directly
 
 ```go
-import "github.com/bjatkin/puffin"
+package main 
+
+import "github.com/weave-lab/puffin"
 
 func branchIsClean(exec puffin.Exec, dir string) (bool, error) {
     cmd := exec.Command("git")
-	cmd.SetArgs(append(cmd.Args(), "status", "--porcelain"))
-	cmd.SetDir(dir)
+    cmd.SetArgs(append(cmd.Args(), "status", "--porcelain"))
+    cmd.SetDir(dir)
 
     status, err := cmd.Output()
     if err != nil {
