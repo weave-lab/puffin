@@ -1312,3 +1312,57 @@ func TestFuncCmd_StdinPipe(t *testing.T) {
 		})
 	}
 }
+
+func TestFuncCmd_SetEnv(t *testing.T) {
+	type fields struct {
+		env map[string]string
+	}
+	type args struct {
+		env []string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   []string
+	}{
+		{
+			"empty env vars",
+			fields{
+				env: make(map[string]string),
+			},
+			args{},
+			nil,
+		},
+		{
+			"nil env map",
+			fields{},
+			args{
+				env: []string{"TEST_A=1", "TEST_B=two"},
+			},
+			[]string{"TEST_A=1", "TEST_B=two"},
+		},
+		{
+			"golden path",
+			fields{
+				env: make(map[string]string),
+			},
+			args{
+				env: []string{"TEST_A=1", "TEST_B=two", "EMPTY=", "DOUBLE=one=1"},
+			},
+			[]string{"DOUBLE=one=1", "EMPTY=", "TEST_A=1", "TEST_B=two"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &FuncCmd{
+				env: tt.fields.env,
+			}
+			c.SetEnv(tt.args.env)
+
+			if env := c.Env(); !reflect.DeepEqual(env, tt.want) {
+				t.Errorf("SetEnv() = %v, want %v", env, tt.want)
+			}
+		})
+	}
+}
