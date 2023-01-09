@@ -429,10 +429,10 @@ func (c *FuncCmd) SetEnv(env []string) {
 	}
 
 	for _, e := range env {
-		nameVal := strings.Split(e, "=")
+		nameVal := strings.SplitN(e, "=", 2)
 		name := nameVal[0]
 		var val string
-		if len(nameVal) == 1 {
+		if len(nameVal) >= 2 {
 			val = nameVal[1]
 		}
 		c.env[name] = val
