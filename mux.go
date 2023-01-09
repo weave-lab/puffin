@@ -54,6 +54,41 @@ func NewFuncMapMux(funcMap map[string]CmdFunc) *Mux {
 	return mux
 }
 
+// NewStdoutMux returns a new mux with a single handler that matches all commands
+// it will write the provided message to stdout and return a 0 error code
+func NewStdoutMux(stdout string) *Mux {
+	return &Mux{
+		matchers: []muxMatcher{{
+			pat: pat("*"),
+			handler: func(cmd *FuncCmd) int {
+				_, err := cmd.Stdout().Write([]byte(stdout))
+				if err != nil {
+					// return a non-zero error code since the stdout write failed
+					return 1
+				}
+
+				return 0
+			},
+		}},
+	}
+}
+
+// NewStderrMux returns a new mux with a single handler that matches all commands
+// it will write the provided message to stderr and return the provided error code
+func NewStderrMux(stderr string, errCode int) *Mux {
+	return &Mux{
+		matchers: []muxMatcher{{
+			pat: pat("*"),
+			handler: func(cmd *FuncCmd) int {
+				// this failure should be really rare, so we can probably just ignore it
+				_, _ = cmd.Stderr().Write([]byte(stderr))
+
+				return errCode
+			},
+		}},
+	}
+}
+
 // HandleFunc adds a new handler func to the mux with the given Pattern matcher
 func (m *Mux) HandleFunc(pat Pattern, handler CmdFunc) {
 	m.matchers = append(m.matchers, muxMatcher{
