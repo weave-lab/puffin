@@ -1,6 +1,7 @@
 package pat
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/weave-lab/puffin"
@@ -88,4 +89,95 @@ func TestPattern_Match(t *testing.T) {
 
 func puffinCmd(cmd string, args ...string) *puffin.FuncCmd {
 	return puffin.NewFuncExec(nil).Command(cmd, args...).(*puffin.FuncCmd)
+}
+
+func TestNew(t *testing.T) {
+	type args struct {
+		cmd  string
+		args []string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		want      *Pattern
+		match     []*puffin.FuncCmd
+		dontMatch []*puffin.FuncCmd
+	}{
+		{
+			"no args",
+			args{
+				cmd: "test",
+			},
+			&Pattern{
+				Cmd: "test",
+			},
+			[]*puffin.FuncCmd{
+				puffinCmd("test"),
+				puffinCmd("test", "arg1", "arg2"),
+			},
+			[]*puffin.FuncCmd{
+				puffinCmd("go", "arg1", "arg2"),
+				puffinCmd("cmd"),
+			},
+		},
+		{
+			"with args",
+			args{
+				cmd:  "test",
+				args: []string{"arg2", "arg1"},
+			},
+			&Pattern{
+				Cmd:  "test",
+				Args: []string{"arg2", "arg1"},
+			},
+			[]*puffin.FuncCmd{
+				puffinCmd("test", "arg1", "arg2"),
+				puffinCmd("test", "arg1", "arg2", "arg3"),
+			},
+			[]*puffin.FuncCmd{
+				puffinCmd("test"),
+				puffinCmd("test", "arg0"),
+			},
+		},
+		{
+			"args only",
+			args{
+				cmd:  "*",
+				args: []string{"arg2", "arg1"},
+			},
+			&Pattern{
+				Cmd:  "*",
+				Args: []string{"arg2", "arg1"},
+			},
+			[]*puffin.FuncCmd{
+				puffinCmd("test", "arg2", "arg1", "arg0"),
+				puffinCmd("git", "arg2", "arg1"),
+				puffinCmd("go", "arg1", "arg2"),
+			},
+			[]*puffin.FuncCmd{
+				puffinCmd("fail"),
+				puffinCmd("go", "build", "."),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := New(tt.args.cmd, tt.args.args...)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
+			}
+
+			for _, match := range tt.match {
+				if !got.Match(match) {
+					t.Errorf("New() failed to match %v", match)
+				}
+			}
+
+			for _, match := range tt.dontMatch {
+				if got.Match(match) {
+					t.Errorf("New() invalid match %v", match)
+				}
+			}
+		})
+	}
 }
