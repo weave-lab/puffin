@@ -419,6 +419,7 @@ func (c *FuncCmd) Env() []string {
 }
 
 // SetEnv sets the Cmd env
+// Overwrites existing envs with the same name, but appends the others
 func (c *FuncCmd) SetEnv(env []string) {
 	if len(env) == 0 {
 		return
