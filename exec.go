@@ -61,6 +61,7 @@ func (c *OsCmd) Env() []string {
 }
 
 // SetEnv sets the Cmd env https://pkg.go.dev/os/exec#Cmd
+// Replaces all existing envs with this slice; does not append.
 func (c *OsCmd) SetEnv(env []string) {
 	c.Cmd.Env = env
 }
