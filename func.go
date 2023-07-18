@@ -106,7 +106,7 @@ func (e *FuncExec) Command(name string, arg ...string) Cmd {
 }
 
 // CommandContext works the same as Command except it includes a context that
-// can be used to cancle the commands execution
+// can be used to cancel the commands execution
 func (e *FuncExec) CommandContext(ctx context.Context, name string, arg ...string) Cmd {
 	if ctx == nil {
 		panic("nil Context")
@@ -233,7 +233,7 @@ func (c *FuncCmd) Run() error {
 	return c.Wait()
 }
 
-// Start starts the specified command and returns imediately.
+// Start starts the specified command and returns immediately.
 // Wait should be called to wait for the command to complete.
 func (c *FuncCmd) Start() error {
 	if c.path == "" && c.err == nil {
@@ -292,7 +292,7 @@ func (c *FuncCmd) Start() error {
 	return nil
 }
 
-// StderrPipe returns a io.ReadCloser that is attached to the cmds Stderr
+// StderrPipe returns an io.ReadCloser that is attached to the cmds Stderr
 func (c *FuncCmd) StderrPipe() (io.ReadCloser, error) {
 	if c.stderr != nil {
 		return nil, errors.New("exec: Stderr already set")
@@ -320,7 +320,7 @@ func (c *FuncCmd) StdinPipe() (io.WriteCloser, error) {
 	return buf, nil
 }
 
-// StdoutPipe returns an io.ReadCloser that is attached to  to the cmds Stdout
+// StdoutPipe returns an io.ReadCloser that is attached to the cmds Stdout
 func (c *FuncCmd) StdoutPipe() (io.ReadCloser, error) {
 	if c.stdout != nil {
 		return nil, errors.New("exec: Stdout already set")
@@ -501,6 +501,11 @@ func (c *FuncCmd) SetExtraFiles(extraFiles []*os.File) {
 // SysProcAttr returns the Cmd sys proc attr
 func (c *FuncCmd) SysProcAttr() *syscall.SysProcAttr {
 	return c.sysProcAttr
+}
+
+// SetSysProcAttr sets the Cmd sys proc attr
+func (c *FuncCmd) SetSysProcAttr(attr *syscall.SysProcAttr) {
+	c.sysProcAttr = attr
 }
 
 // Process returns the Cmd process

@@ -121,6 +121,11 @@ func (c *OsCmd) SysProcAttr() *syscall.SysProcAttr {
 	return c.Cmd.SysProcAttr
 }
 
+// SetSysProcAttr sets the Cmd sys proc attr https://pkg.go.dev/os/exec#Cmd
+func (c *OsCmd) SetSysProcAttr(attr *syscall.SysProcAttr) {
+	c.Cmd.SysProcAttr = attr
+}
+
 // Process returns the Cmd process https://pkg.go.dev/os/exec#Cmd
 func (c *OsCmd) Process() *os.Process {
 	return c.Cmd.Process

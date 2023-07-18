@@ -95,6 +95,9 @@ type Cmd interface {
 	// SysProcAttr returns optional, operating system-specific attributes
 	SysProcAttr() *syscall.SysProcAttr
 
+	// SetSysProcAttr sets the SysProcAttr field on the underlying command
+	SetSysProcAttr(*syscall.SysProcAttr)
+
 	// Process is the underlying process, once started.
 	Process() *os.Process
 
