@@ -69,6 +69,17 @@ func TestExec_LookPath(t *testing.T) {
 			"/path/to/test",
 			false,
 		},
+		{
+			"has wild card",
+			fields{
+				bins: []string{"/path/to/test", "*"},
+			},
+			args{
+				file: "/missing/file",
+			},
+			"/missing/file",
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
